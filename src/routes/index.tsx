@@ -63,6 +63,7 @@ const statusLabel: Record<Status, string> = {
 
 function Index() {
   const [rooms, setRooms] = useState<Room[]>(() => buildRooms());
+  const [selectedFloor, setSelectedFloor] = useState<number | "all">("all");
 
   const stats = useMemo(() => {
     const total = rooms.length;
@@ -96,6 +97,11 @@ function Index() {
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
   }, [rooms]);
 
+  const filteredFloors = useMemo(() => {
+    if (selectedFloor === "all") return groupedByFloor;
+    return groupedByFloor.filter(([floor]) => floor === selectedFloor);
+  }, [groupedByFloor, selectedFloor]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200">
@@ -114,6 +120,19 @@ function Index() {
           <StatCard label="อัตราการเข้าพัก" value={`${stats.occupancy}%`} color="text-indigo-600" />
         </section>
 
+        {/* Floor Filter */}
+        <section className="flex flex-wrap gap-2">
+          <FilterButton label="ทั้งหมด" active={selectedFloor === "all"} onClick={() => setSelectedFloor("all")} />
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((f) => (
+            <FilterButton
+              key={f}
+              label={`ชั้น ${f}`}
+              active={selectedFloor === f}
+              onClick={() => setSelectedFloor(f)}
+            />
+          ))}
+        </section>
+
         {/* Legend */}
         <div className="flex flex-wrap gap-4 text-sm">
           <LegendDot className="bg-emerald-500" label="ว่าง" />
@@ -124,7 +143,7 @@ function Index() {
 
         {/* Floors */}
         <section className="space-y-6">
-          {groupedByFloor.map(([floor, list]) => {
+          {filteredFloors.map(([floor, list]) => {
             const type = list[0].type;
             const price = list[0].price;
             return (
@@ -168,6 +187,21 @@ function StatCard({ label, value, color }: { label: string; value: number | stri
       <p className="text-sm text-slate-500">{label}</p>
       <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
     </div>
+  );
+}
+
+function FilterButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+        active
+          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
