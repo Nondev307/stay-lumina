@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "ระบบจองห้องพักโรงแรม" },
-      { name: "description", content: "Visual Dashboard สำหรับจัดการห้องพักโรงแรม 7 ชั้น" },
+      { name: "description", content: "Visual Dashboard สำหรับจัดการห้องพักโรงแรม 8 ชั้น" },
     ],
   }),
   component: Index,
@@ -101,7 +101,7 @@ function Index() {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <h1 className="text-2xl font-bold text-slate-900">🏨 ระบบจัดการห้องพักโรงแรม</h1>
-          <p className="text-sm text-slate-500 mt-1">Visual Dashboard — 7 ชั้น · 50 ห้อง</p>
+          <p className="text-sm text-slate-500 mt-1">Visual Dashboard — 8 ชั้น · 80 ห้อง</p>
         </div>
       </header>
 
@@ -136,7 +136,7 @@ function Index() {
                   </div>
                   <p className="text-xs text-slate-400">{list.length} ห้อง</p>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                <div className="grid grid-cols-5 md:grid-cols-10 gap-3">
                   {list.map((room) => (
                     <button
                       key={room.id}
