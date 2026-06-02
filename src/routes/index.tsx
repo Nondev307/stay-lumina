@@ -63,6 +63,7 @@ const statusLabel: Record<Status, string> = {
 
 function Index() {
   const [rooms, setRooms] = useState<Room[]>(() => buildRooms());
+  const [selectedFloor, setSelectedFloor] = useState<number | "all">("all");
 
   const stats = useMemo(() => {
     const total = rooms.length;
@@ -95,6 +96,11 @@ function Index() {
     }
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
   }, [rooms]);
+
+  const filteredFloors = useMemo(() => {
+    if (selectedFloor === "all") return groupedByFloor;
+    return groupedByFloor.filter(([floor]) => floor === selectedFloor);
+  }, [groupedByFloor, selectedFloor]);
 
   return (
     <div className="min-h-screen bg-slate-50">
