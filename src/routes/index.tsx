@@ -190,6 +190,21 @@ function StatCard({ label, value, color }: { label: string; value: number | stri
   );
 }
 
+function FilterButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+        active
+          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function LegendDot({ className, label }: { className: string; label: string }) {
   return (
     <div className="flex items-center gap-2">
