@@ -23,10 +23,10 @@ interface Room {
 }
 
 const FLOORS = [
-  { floors: [1, 2], type: "Standard Room", perFloor: 8, price: 800 },
-  { floors: [3, 4], type: "Superior Room", perFloor: 8, price: 1400 },
-  { floors: [5, 6], type: "Deluxe Room", perFloor: 6, price: 2200 },
-  { floors: [7], type: "Premium Room", perFloor: 6, price: 3300 },
+  { floors: [1, 2], type: "Standard Room", perFloor: 10, price: 900 },
+  { floors: [3, 4], type: "Superior Room", perFloor: 10, price: 1500 },
+  { floors: [5, 6], type: "Deluxe Room", perFloor: 10, price: 2700 },
+  { floors: [7, 8], type: "Premium Room", perFloor: 10, price: 3900 },
 ];
 
 function buildRooms(): Room[] {
@@ -131,7 +131,7 @@ function Index() {
               <div key={floor} className="bg-white rounded-xl border border-slate-200 p-5">
                 <div className="flex items-baseline justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">ชั้น {floor}</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">ชั้น {floor}</h2>
                     <p className="text-sm text-slate-500">{type} · ฿{price.toLocaleString()}/คืน</p>
                   </div>
                   <p className="text-xs text-slate-400">{list.length} ห้อง</p>
