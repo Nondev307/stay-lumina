@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "ระบบจองห้องพักโรงแรม" },
-      { name: "description", content: "Visual Dashboard สำหรับจัดการห้องพักโรงแรม 7 ชั้น" },
+      { name: "description", content: "Visual Dashboard สำหรับจัดการห้องพักโรงแรม 8 ชั้น" },
     ],
   }),
   component: Index,
@@ -23,10 +23,10 @@ interface Room {
 }
 
 const FLOORS = [
-  { floors: [1, 2], type: "Standard Room", perFloor: 8, price: 800 },
-  { floors: [3, 4], type: "Superior Room", perFloor: 8, price: 1400 },
-  { floors: [5, 6], type: "Deluxe Room", perFloor: 6, price: 2200 },
-  { floors: [7], type: "Premium Room", perFloor: 6, price: 3300 },
+  { floors: [1, 2], type: "Standard Room", perFloor: 10, price: 900 },
+  { floors: [3, 4], type: "Superior Room", perFloor: 10, price: 1500 },
+  { floors: [5, 6], type: "Deluxe Room", perFloor: 10, price: 2700 },
+  { floors: [7, 8], type: "Premium Room", perFloor: 10, price: 3900 },
 ];
 
 function buildRooms(): Room[] {
@@ -101,7 +101,7 @@ function Index() {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <h1 className="text-2xl font-bold text-slate-900">🏨 ระบบจัดการห้องพักโรงแรม</h1>
-          <p className="text-sm text-slate-500 mt-1">Visual Dashboard — 7 ชั้น · 50 ห้อง</p>
+          <p className="text-sm text-slate-500 mt-1">Visual Dashboard — 8 ชั้น · 80 ห้อง</p>
         </div>
       </header>
 
@@ -131,12 +131,12 @@ function Index() {
               <div key={floor} className="bg-white rounded-xl border border-slate-200 p-5">
                 <div className="flex items-baseline justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">ชั้น {floor}</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">ชั้น {floor}</h2>
                     <p className="text-sm text-slate-500">{type} · ฿{price.toLocaleString()}/คืน</p>
                   </div>
                   <p className="text-xs text-slate-400">{list.length} ห้อง</p>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                <div className="grid grid-cols-5 md:grid-cols-10 gap-3">
                   {list.map((room) => (
                     <button
                       key={room.id}
