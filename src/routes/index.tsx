@@ -133,6 +133,19 @@ function Index() {
           ))}
         </section>
 
+        {/* Floor Filter */}
+        <section className="flex flex-wrap gap-2">
+          <FilterButton label="ทั้งหมด" active={selectedFloor === "all"} onClick={() => setSelectedFloor("all")} />
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((f) => (
+            <FilterButton
+              key={f}
+              label={`ชั้น ${f}`}
+              active={selectedFloor === f}
+              onClick={() => setSelectedFloor(f)}
+            />
+          ))}
+        </section>
+
         {/* Legend */}
         <div className="flex flex-wrap gap-4 text-sm">
           <LegendDot className="bg-emerald-500" label="ว่าง" />
