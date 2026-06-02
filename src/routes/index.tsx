@@ -120,6 +120,19 @@ function Index() {
           <StatCard label="อัตราการเข้าพัก" value={`${stats.occupancy}%`} color="text-indigo-600" />
         </section>
 
+        {/* Floor Filter */}
+        <section className="flex flex-wrap gap-2">
+          <FilterButton label="ทั้งหมด" active={selectedFloor === "all"} onClick={() => setSelectedFloor("all")} />
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((f) => (
+            <FilterButton
+              key={f}
+              label={`ชั้น ${f}`}
+              active={selectedFloor === f}
+              onClick={() => setSelectedFloor(f)}
+            />
+          ))}
+        </section>
+
         {/* Legend */}
         <div className="flex flex-wrap gap-4 text-sm">
           <LegendDot className="bg-emerald-500" label="ว่าง" />
@@ -130,7 +143,7 @@ function Index() {
 
         {/* Floors */}
         <section className="space-y-6">
-          {groupedByFloor.map(([floor, list]) => {
+          {filteredFloors.map(([floor, list]) => {
             const type = list[0].type;
             const price = list[0].price;
             return (
