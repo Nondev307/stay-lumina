@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BedDouble, Building2, Star, Clock, ArrowRight, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BedDouble, Building2, Star, Clock, ArrowRight, Sparkles, Wifi, Bath, Coffee, Wind, Check } from "lucide-react";
 import { NavBar } from "@/components/NavBar";
 import heroRoom from "@/assets/hero-room.jpg";
+import roomStandard from "@/assets/room-standard.jpg";
+import roomSuperior from "@/assets/room-superior.jpg";
+import roomDeluxe from "@/assets/room-deluxe.jpg";
+import roomPremium from "@/assets/room-premium.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,7 +29,63 @@ const stats = [
   { icon: Clock, label: "เปิดบริการ", value: "24", unit: "ชั่วโมง" },
 ];
 
+const rooms = [
+  {
+    name: "Standard Room",
+    tagline: "ห้องพักเริ่มต้นที่ลงตัว",
+    price: 900,
+    image: roomStandard,
+    features: [
+      { icon: BedDouble, text: "เตียงเดี่ยวหรือเตียงคู่" },
+      { icon: Wifi, text: "Wi-Fi ความเร็วสูง" },
+      { icon: Bath, text: "ห้องน้ำส่วนตัว" },
+      { icon: Wind, text: "วิวเมืองหรือวิวสวน" },
+    ],
+  },
+  {
+    name: "Superior Room",
+    tagline: "พื้นที่ผ่อนคลายระดับเหนือกว่า",
+    price: 1500,
+    image: roomSuperior,
+    features: [
+      { icon: BedDouble, text: "เตียง Queen Size" },
+      { icon: Wind, text: "ระเบียงส่วนตัว" },
+      { icon: Sparkles, text: "ชุดโซฟาพักผ่อน" },
+      { icon: Bath, text: "วิวสระว่ายน้ำหรือวิวสวน" },
+    ],
+  },
+  {
+    name: "Deluxe Room",
+    tagline: "ความหรูหราที่กว้างขวาง",
+    price: 2700,
+    image: roomDeluxe,
+    features: [
+      { icon: BedDouble, text: "เตียง King Size" },
+      { icon: Sparkles, text: "พื้นที่ห้องกว้างขวาง" },
+      { icon: Coffee, text: "มินิบาร์และเครื่องชงชา/กาแฟ" },
+      { icon: Wind, text: "หน้าต่างกระจกเต็มบาน" },
+    ],
+  },
+  {
+    name: "Premium Room",
+    tagline: "ประสบการณ์ระดับสูงสุด",
+    price: 3900,
+    image: roomPremium,
+    features: [
+      { icon: BedDouble, text: "เตียง King Size ระดับพรีเมียม" },
+      { icon: Sparkles, text: "พื้นที่นั่งเล่นแยกสัดส่วน" },
+      { icon: Bath, text: "อ่างอาบน้ำและ Rain Shower" },
+      { icon: Wind, text: "วิวพาโนรามา" },
+    ],
+  },
+];
+
 function Home() {
+  const scrollToRooms = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen bg-[var(--cream)] text-[var(--ink)]">
       <NavBar />
@@ -32,7 +93,6 @@ function Home() {
       {/* Hero */}
       <section className="relative pt-32 md:pt-36 pb-20 px-6">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-          {/* Left */}
           <div className="space-y-7">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-[var(--cream-dark)] text-xs tracking-[0.2em] uppercase text-[var(--forest)]">
               <Sparkles className="w-3.5 h-3.5 text-[var(--gold)]" />
@@ -55,16 +115,16 @@ function Home() {
                 จองห้องพักเลย
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link
-                to="/booking"
+              <a
+                href="#rooms"
+                onClick={scrollToRooms}
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-transparent border border-[var(--forest-deep)]/30 text-[var(--forest-deep)] font-semibold hover:bg-white/60 transition"
               >
                 ดูห้องพัก
-              </Link>
+              </a>
             </div>
           </div>
 
-          {/* Right */}
           <div className="relative">
             <div className="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-[var(--forest-deep)]/20">
               <img
@@ -77,7 +137,6 @@ function Home() {
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-deep)]/30 via-transparent to-transparent" />
             </div>
 
-            {/* Floating card */}
             <div className="absolute -bottom-6 -left-6 md:-left-10 bg-[var(--cream)] rounded-2xl p-5 shadow-xl border border-[var(--cream-dark)] w-56">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-[var(--forest-deep)] flex items-center justify-center">
@@ -128,6 +187,9 @@ function Home() {
         </div>
       </section>
 
+      {/* Our Rooms */}
+      <RoomsSection />
+
       {/* Footer */}
       <footer className="border-t border-[var(--cream-dark)] bg-[var(--forest-deep)] text-[var(--cream)]">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -138,6 +200,107 @@ function Home() {
           <p className="text-xs text-[var(--cream)]/60">© 2026 Lumina Hotel. All rights reserved.</p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function RoomsSection() {
+  return (
+    <section id="rooms" className="px-6 pb-24 pt-8 scroll-mt-24">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="text-xs tracking-[0.3em] uppercase text-[var(--gold)] font-medium mb-3">
+            Our Rooms
+          </p>
+          <h2 className="font-serif text-4xl md:text-5xl text-[var(--forest-deep)]">
+            ประเภทห้องพัก
+          </h2>
+          <p className="text-[var(--ink-muted)] mt-4 max-w-xl mx-auto">
+            เลือกห้องพักที่ตอบโจทย์ความต้องการ ตั้งแต่ห้องมาตรฐานไปจนถึงห้องพรีเมียม
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {rooms.map((room, i) => (
+            <RoomCard key={room.name} room={room} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RoomCard({
+  room,
+  index,
+}: {
+  room: (typeof rooms)[number];
+  index: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: visible ? `${index * 120}ms` : "0ms" }}
+      className={`group bg-white rounded-3xl overflow-hidden border border-[var(--cream-dark)] shadow-sm hover:shadow-2xl transition-all duration-700 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+      }`}
+    >
+      <div className="relative h-56 overflow-hidden">
+        <img
+          src={room.image}
+          alt={room.name}
+          width={1024}
+          height={1024}
+          loading="lazy"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+        />
+        <div className="absolute top-4 right-4 bg-[var(--cream)]/95 backdrop-blur rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--forest-deep)]">
+          ฿{room.price.toLocaleString()} <span className="text-[var(--ink-muted)] font-normal">/คืน</span>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div>
+          <h3 className="font-serif text-2xl text-[var(--forest-deep)]">{room.name}</h3>
+          <p className="text-xs text-[var(--ink-muted)] mt-1">{room.tagline}</p>
+        </div>
+
+        <ul className="space-y-2.5">
+          {room.features.map((f) => (
+            <li key={f.text} className="flex items-start gap-2.5 text-sm text-[var(--ink)]">
+              <Check className="w-4 h-4 text-[var(--gold)] mt-0.5 shrink-0" />
+              <span>{f.text}</span>
+            </li>
+          ))}
+        </ul>
+
+        <Link
+          to="/booking"
+          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-[var(--forest-deep)] text-[var(--cream)] text-sm font-semibold hover:bg-[var(--forest)] transition"
+        >
+          จองห้องนี้
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
     </div>
   );
 }
