@@ -14,7 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      booking_private: {
+        Row: {
+          booking_id: string
+          created_at: string
+          phone: string
+          secret_hash: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          phone: string
+          secret_hash: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          phone?: string
+          secret_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_private_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          created_at: string
+          id: string
+          nickname: string
+          room_number: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nickname: string
+          room_number: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nickname?: string
+          room_number?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
