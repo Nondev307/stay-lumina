@@ -78,14 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "LUMINA HOTEL" },
+      { name: "description", content: "Hotel View is a web application for hotel room booking with a visual dashboard." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "LUMINA HOTEL" },
+      { property: "og:description", content: "Hotel View is a web application for hotel room booking with a visual dashboard." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "LUMINA HOTEL" },
+      { name: "twitter:description", content: "Hotel View is a web application for hotel room booking with a visual dashboard." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9a82a193-aa13-43d8-a381-527634201d0f/id-preview-8e6aef98--c2d30a5e-95fa-4167-8860-7d03e5505762.lovable.app-1780636821423.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9a82a193-aa13-43d8-a381-527634201d0f/id-preview-8e6aef98--c2d30a5e-95fa-4167-8860-7d03e5505762.lovable.app-1780636821423.png" },
     ],
     links: [
       {
