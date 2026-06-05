@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { BedDouble, Wifi, Bath, Coffee, Wind, Sparkles, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { BedDouble, Wifi, Bath, Coffee, Wind, Sparkles, Check, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 import { NavBar } from "@/components/NavBar";
+import { supabase } from "@/integrations/supabase/client";
+import { bookRoom, cancelBooking } from "@/lib/booking.functions";
 import roomStandard from "@/assets/room-standard.jpg";
 import roomSuperior from "@/assets/room-superior.jpg";
 import roomDeluxe from "@/assets/room-deluxe.jpg";
@@ -17,15 +21,13 @@ export const Route = createFileRoute("/booking")({
   component: Booking,
 });
 
-type Status = "available" | "occupied" | "reserved";
+type Status = "available" | "occupied";
 
-interface Room {
-  id: string;
+interface RoomMeta {
   number: string;
   floor: number;
   type: string;
   price: number;
-  status: Status;
 }
 
 const FLOORS = [
@@ -82,24 +84,39 @@ const ROOM_TYPES = [
   },
 ];
 
-function buildRooms(): Room[] {
-  const rooms: Room[] = [];
+function buildRooms(): RoomMeta[] {
+  const rooms: RoomMeta[] = [];
   for (const group of FLOORS) {
     for (const floor of group.floors) {
       for (let i = 1; i <= group.perFloor; i++) {
         const num = `${floor}${i.toString().padStart(2, "0")}`;
-        rooms.push({
-          id: num,
-          number: num,
-          floor,
-          type: group.type,
-          price: group.price,
-          status: "available",
-        });
+        rooms.push({ number: num, floor, type: group.type, price: group.price });
       }
     }
   }
   return rooms;
+}
+
+const ALL_ROOMS = buildRooms();
+const SECRETS_KEY = "lumina_booking_secrets_v1";
+
+function loadSecrets(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SECRETS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveSecrets(secrets: Record<string, string>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SECRETS_KEY, JSON.stringify(secrets));
+}
+
+interface BookingRow {
+  room_number: string;
+  nickname: string;
 }
 
 const statusStyles: Record<Status, string> = {
@@ -107,66 +124,133 @@ const statusStyles: Record<Status, string> = {
     "bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-900 border-emerald-300 hover:border-emerald-500 hover:shadow-emerald-200",
   occupied:
     "bg-gradient-to-br from-rose-500 to-rose-700 text-white border-rose-700 hover:shadow-rose-300",
-  reserved:
-    "bg-gradient-to-br from-amber-100 to-amber-200 text-amber-950 border-amber-400 hover:shadow-amber-200",
 };
 
 const statusDot: Record<Status, string> = {
   available: "bg-emerald-500",
   occupied: "bg-white",
-  reserved: "bg-amber-600",
-};
-
-const statusLabel: Record<Status, string> = {
-  available: "ว่าง",
-  occupied: "ไม่ว่าง",
-  reserved: "จองแล้ว",
 };
 
 function Booking() {
-  const [rooms, setRooms] = useState<Room[]>(() => buildRooms());
+  const [bookings, setBookings] = useState<Map<string, BookingRow>>(new Map());
   const [selectedFloor, setSelectedFloor] = useState<number | "all">("all");
+  const [secrets, setSecrets] = useState<Record<string, string>>({});
+  const [dialogRoom, setDialogRoom] = useState<RoomMeta | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const bookFn = useServerFn(bookRoom);
+  const cancelFn = useServerFn(cancelBooking);
+
+  // Load secrets from localStorage once
+  useEffect(() => {
+    setSecrets(loadSecrets());
+  }, []);
+
+  // Initial fetch + realtime
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.from("bookings").select("room_number, nickname");
+      if (!mounted) return;
+      const map = new Map<string, BookingRow>();
+      (data ?? []).forEach((b) => map.set(b.room_number, b as BookingRow));
+      setBookings(map);
+      setLoading(false);
+    })();
+
+    const channel = supabase
+      .channel("bookings-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        (payload) => {
+          setBookings((prev) => {
+            const next = new Map(prev);
+            if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+              const row = payload.new as BookingRow;
+              next.set(row.room_number, row);
+            } else if (payload.eventType === "DELETE") {
+              const row = payload.old as BookingRow;
+              next.delete(row.room_number);
+            }
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const stats = useMemo(() => {
-    const total = rooms.length;
-    const available = rooms.filter((r) => r.status === "available").length;
-    const occupied = rooms.filter((r) => r.status === "occupied").length;
-    const reserved = rooms.filter((r) => r.status === "reserved").length;
-    const occupancy = total ? Math.round(((occupied + reserved) / total) * 100) : 0;
-    return { total, available, occupied, reserved, occupancy };
-  }, [rooms]);
-
-  const toggle = (id: string) => {
-    setRooms((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status:
-                r.status === "available" ? "occupied" : r.status === "occupied" ? "available" : r.status,
-            }
-          : r,
-      ),
-    );
-  };
-
-  const setStatus = (id: string, status: Status) => {
-    setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
-  };
+    const total = ALL_ROOMS.length;
+    const occupied = bookings.size;
+    const available = total - occupied;
+    const occupancy = total ? Math.round((occupied / total) * 100) : 0;
+    return { total, available, occupied, occupancy };
+  }, [bookings]);
 
   const groupedByFloor = useMemo(() => {
-    const map = new Map<number, Room[]>();
-    for (const r of rooms) {
+    const map = new Map<number, RoomMeta[]>();
+    for (const r of ALL_ROOMS) {
       if (!map.has(r.floor)) map.set(r.floor, []);
       map.get(r.floor)!.push(r);
     }
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
-  }, [rooms]);
+  }, []);
 
   const filteredFloors = useMemo(() => {
     if (selectedFloor === "all") return groupedByFloor;
     return groupedByFloor.filter(([floor]) => floor === selectedFloor);
   }, [groupedByFloor, selectedFloor]);
+
+  const handleRoomClick = async (room: RoomMeta) => {
+    const booked = bookings.get(room.number);
+    if (!booked) {
+      setDialogRoom(room);
+      return;
+    }
+    // Occupied — check if we own it
+    const ownSecret = secrets[room.number];
+    if (!ownSecret) {
+      toast.error("ไม่สามารถยกเลิกได้", {
+        description: `ห้อง ${room.number} จองโดย ${booked.nickname} — เฉพาะผู้จองเท่านั้นที่ยกเลิกได้`,
+      });
+      return;
+    }
+    if (!confirm(`ยกเลิกการจองห้อง ${room.number}?`)) return;
+    try {
+      await cancelFn({ data: { room_number: room.number, secret: ownSecret } });
+      const next = { ...secrets };
+      delete next[room.number];
+      setSecrets(next);
+      saveSecrets(next);
+      toast.success(`ยกเลิกห้อง ${room.number} เรียบร้อย`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ยกเลิกไม่สำเร็จ");
+    }
+  };
+
+  const handleBookSubmit = async (nickname: string, phone: string) => {
+    if (!dialogRoom) return;
+    try {
+      const res = await bookFn({
+        data: { room_number: dialogRoom.number, nickname, phone },
+      });
+      const next = { ...secrets, [dialogRoom.number]: res.secret };
+      setSecrets(next);
+      saveSecrets(next);
+      toast.success(`จองห้อง ${dialogRoom.number} สำเร็จ`, {
+        description: "คุณสามารถกดที่ห้องเพื่อยกเลิกได้",
+      });
+      setDialogRoom(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "จองไม่สำเร็จ");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--cream)] text-[var(--ink)]">
@@ -184,7 +268,7 @@ function Booking() {
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center max-w-3xl mx-auto animate-fade-in">
             <p className="text-xs tracking-[0.3em] uppercase text-[var(--gold)] font-medium mb-4">
-              Property Management
+              Property Management · Live
             </p>
             <h1 className="font-serif text-5xl md:text-6xl text-[var(--forest-deep)] leading-tight">
               เลือกห้องพักของคุณ
@@ -194,11 +278,10 @@ function Booking() {
             </p>
           </div>
 
-          {/* Summary glass cards */}
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="ห้องทั้งหมด" value={stats.total} />
             <StatCard label="ห้องว่าง" value={stats.available} accent="text-emerald-700" />
-            <StatCard label="ไม่ว่าง / จองแล้ว" value={stats.occupied + stats.reserved} accent="text-rose-700" />
+            <StatCard label="ไม่ว่าง" value={stats.occupied} accent="text-rose-700" />
             <StatCard label="อัตราการเข้าพัก" value={`${stats.occupancy}%`} accent="text-[var(--gold)]" />
           </div>
         </div>
@@ -222,11 +305,9 @@ function Booking() {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-deep)]/70 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white">
-                    <div>
-                      <p className="text-[10px] tracking-widest uppercase opacity-80">{t.floors}</p>
-                      <h3 className="font-serif text-xl">{t.name}</h3>
-                    </div>
+                  <div className="absolute bottom-3 left-4 right-4 text-white">
+                    <p className="text-[10px] tracking-widest uppercase opacity-80">{t.floors}</p>
+                    <h3 className="font-serif text-xl">{t.name}</h3>
                   </div>
                 </div>
                 <div className="p-5 space-y-3">
@@ -272,10 +353,9 @@ function Booking() {
           {/* Legend */}
           <div className="flex flex-wrap gap-5 text-sm items-center mb-6 px-5 py-3.5 rounded-[20px] bg-white/60 backdrop-blur-md border border-white/80">
             <LegendDot className="bg-gradient-to-br from-emerald-100 to-emerald-200 border-emerald-400" label="ว่าง" />
-            <LegendDot className="bg-gradient-to-br from-amber-200 to-amber-300 border-amber-500" label="จองแล้ว" />
             <LegendDot className="bg-gradient-to-br from-rose-500 to-rose-700 border-rose-700" label="ไม่ว่าง" />
             <span className="text-[var(--ink-muted)] ml-auto text-xs hidden md:block">
-              คลิก: ว่าง ↔ ไม่ว่าง · คลิกขวา: สลับสถานะจอง
+              {loading ? "กำลังโหลดข้อมูล…" : "คลิกห้องว่างเพื่อจอง · คลิกห้องของคุณเพื่อยกเลิก"}
             </span>
           </div>
 
@@ -284,7 +364,7 @@ function Booking() {
             {filteredFloors.map(([floor, list]) => {
               const type = list[0].type;
               const price = list[0].price;
-              const floorAvailable = list.filter((r) => r.status === "available").length;
+              const floorAvailable = list.filter((r) => !bookings.has(r.number)).length;
               return (
                 <div
                   key={floor}
@@ -305,29 +385,42 @@ function Booking() {
                     <div className="text-right">
                       <p className="text-xs text-[var(--ink-muted)]">ห้องว่าง</p>
                       <p className="font-serif text-lg text-emerald-700">
-                        {floorAvailable}<span className="text-[var(--ink-muted)] text-sm">/{list.length}</span>
+                        {floorAvailable}
+                        <span className="text-[var(--ink-muted)] text-sm">/{list.length}</span>
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2.5">
-                    {list.map((room) => (
-                      <button
-                        key={room.id}
-                        onClick={() => toggle(room.id)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setStatus(room.id, room.status === "reserved" ? "available" : "reserved");
-                        }}
-                        className={`group/room relative aspect-square rounded-[18px] border font-semibold flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-95 ${statusStyles[room.status]}`}
-                        title={`ห้อง ${room.number} — ${statusLabel[room.status]}`}
-                      >
-                        <span className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${statusDot[room.status]}`} />
-                        <span className="font-serif text-lg leading-none">{room.number}</span>
-                        <span className="text-[9px] uppercase tracking-wider opacity-80 mt-1">
-                          {statusLabel[room.status]}
-                        </span>
-                      </button>
-                    ))}
+                    {list.map((room) => {
+                      const booked = bookings.get(room.number);
+                      const status: Status = booked ? "occupied" : "available";
+                      const isMine = booked && secrets[room.number];
+                      return (
+                        <button
+                          key={room.number}
+                          onClick={() => handleRoomClick(room)}
+                          className={`group/room relative aspect-square rounded-[18px] border font-semibold flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-95 ${statusStyles[status]}`}
+                          title={
+                            booked
+                              ? `ห้อง ${room.number} — จองโดย ${booked.nickname}${isMine ? " (คุณ)" : ""}`
+                              : `ห้อง ${room.number} — ว่าง`
+                          }
+                        >
+                          <span
+                            className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${statusDot[status]}`}
+                          />
+                          {isMine && (
+                            <span className="absolute top-1.5 left-2 text-[8px] uppercase tracking-wider font-bold bg-white/95 text-rose-700 px-1.5 py-0.5 rounded-full">
+                              คุณ
+                            </span>
+                          )}
+                          <span className="font-serif text-lg leading-none">{room.number}</span>
+                          <span className="text-[9px] uppercase tracking-wider opacity-80 mt-1">
+                            {status === "available" ? "ว่าง" : "ไม่ว่าง"}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -335,6 +428,114 @@ function Booking() {
           </div>
         </section>
       </main>
+
+      {dialogRoom && (
+        <BookingDialog
+          room={dialogRoom}
+          onClose={() => setDialogRoom(null)}
+          onSubmit={handleBookSubmit}
+        />
+      )}
+    </div>
+  );
+}
+
+function BookingDialog({
+  room,
+  onClose,
+  onSubmit,
+}: {
+  room: RoomMeta;
+  onClose: () => void;
+  onSubmit: (nickname: string, phone: string) => Promise<void>;
+}) {
+  const [nickname, setNickname] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const valid = nickname.trim().length >= 1 && /^[0-9+\-\s()]{6,20}$/.test(phone.trim());
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(nickname.trim(), phone.trim());
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--forest-deep)]/40 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[var(--cream)] rounded-[24px] w-full max-w-md shadow-2xl border border-white overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative p-6 bg-gradient-to-br from-[var(--forest-deep)] to-[var(--forest)] text-[var(--cream)]">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
+            aria-label="ปิด"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--gold)]">
+            Confirm Booking
+          </p>
+          <h2 className="font-serif text-3xl mt-1">ห้อง {room.number}</h2>
+          <p className="text-sm opacity-80 mt-1">
+            {room.type} · ชั้น {room.floor} ·{" "}
+            <span className="text-[var(--gold)] font-semibold">฿{room.price.toLocaleString()}</span>/คืน
+          </p>
+        </div>
+
+        <form onSubmit={submit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-widest text-[var(--ink-muted)]">
+              ชื่อเล่น
+            </label>
+            <input
+              autoFocus
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              maxLength={40}
+              placeholder="เช่น คุณเอ"
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-[var(--cream-dark)] focus:border-[var(--forest-deep)] focus:outline-none transition"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-widest text-[var(--ink-muted)]">
+              เบอร์โทรศัพท์
+            </label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              inputMode="tel"
+              maxLength={20}
+              placeholder="0xx-xxx-xxxx"
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-[var(--cream-dark)] focus:border-[var(--forest-deep)] focus:outline-none transition"
+            />
+          </div>
+
+          <p className="text-[11px] text-[var(--ink-muted)] leading-relaxed">
+            ระบบจะออกรหัสยกเลิกอัตโนมัติและบันทึกไว้บนเบราว์เซอร์ของคุณ
+            เฉพาะคุณเท่านั้นที่สามารถยกเลิกการจองนี้
+          </p>
+
+          <button
+            type="submit"
+            disabled={!valid || submitting}
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-full bg-[var(--forest-deep)] text-[var(--cream)] font-semibold hover:bg-[var(--forest)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            ยืนยันการจอง
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
