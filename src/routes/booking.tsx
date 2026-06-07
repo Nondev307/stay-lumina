@@ -429,9 +429,15 @@ function Booking() {
                             </span>
                           )}
                           <span className="font-serif text-lg leading-none">{room.number}</span>
-                          <span className="text-[9px] uppercase tracking-wider opacity-80 mt-1">
-                            {status === "available" ? "ว่าง" : "ไม่ว่าง"}
-                          </span>
+                          {booked ? (
+                            <span className="text-[10px] font-medium mt-1 px-1 max-w-full truncate">
+                              {booked.nickname}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] uppercase tracking-wider opacity-80 mt-1">
+                              ว่าง
+                            </span>
+                          )}
                         </button>
                       );
                     })}
