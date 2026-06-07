@@ -199,7 +199,7 @@ function Booking() {
       if (!map.has(r.floor)) map.set(r.floor, []);
       map.get(r.floor)!.push(r);
     }
-    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
   }, []);
 
   const filteredFloors = useMemo(() => {
@@ -221,15 +221,29 @@ function Booking() {
       });
       return;
     }
-    if (!confirm(`ยกเลิกการจองห้อง ${room.number}?`)) return;
+    // Optimistic update — remove immediately for snappy UX
+    setBookings((prev) => {
+      const next = new Map(prev);
+      next.delete(room.number);
+      return next;
+    });
+    const next = { ...secrets };
+    delete next[room.number];
+    setSecrets(next);
+    saveSecrets(next);
     try {
       await cancelFn({ data: { room_number: room.number, secret: ownSecret } });
-      const next = { ...secrets };
-      delete next[room.number];
-      setSecrets(next);
-      saveSecrets(next);
       toast.success(`ยกเลิกห้อง ${room.number} เรียบร้อย`);
     } catch (e) {
+      // Rollback on failure
+      setBookings((prev) => {
+        const reverted = new Map(prev);
+        reverted.set(room.number, booked);
+        return reverted;
+      });
+      const restored = { ...secrets, [room.number]: ownSecret };
+      setSecrets(restored);
+      saveSecrets(restored);
       toast.error(e instanceof Error ? e.message : "ยกเลิกไม่สำเร็จ");
     }
   };
