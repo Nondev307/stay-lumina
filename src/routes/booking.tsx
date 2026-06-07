@@ -199,7 +199,7 @@ function Booking() {
       if (!map.has(r.floor)) map.set(r.floor, []);
       map.get(r.floor)!.push(r);
     }
-    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
   }, []);
 
   const filteredFloors = useMemo(() => {
